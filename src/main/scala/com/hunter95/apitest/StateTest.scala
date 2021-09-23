@@ -23,9 +23,20 @@ object StateTest {
       })
 
     //需求：对于温度传感器温度值跳变，超过10度，报警
-    val alertStream=dataStream
+    val alertStream = dataStream
       .keyBy(_.id)
-      .flatMap(new TempChangeAlert(10.0))
+      //  .flatMap(new TempChangeAlert(10.0))
+      .flatMapWithState[(String,Double,Double),Double]({
+        case (data:SensorReading,None)=>(List.empty,Some(data.temperature))
+        case (data:SensorReading,lastTemp:Some[Double])=>{
+          //跟最新的温度值求差值作比较
+          val diff = (data.temperature - lastTemp.get).abs
+          if (diff > 10)
+            (List((data.id,lastTemp.get,data.temperature)),Some(data.temperature))
+          else
+            (List.empty,Some(data.temperature))
+        }
+      })
 
     alertStream.print()
 
@@ -34,47 +45,48 @@ object StateTest {
 }
 
 //实现自定义RichFlatMapFunction
-class TempChangeAlert(threshold: Double) extends RichFlatMapFunction[SensorReading,(String,Double,Double)]{
+class TempChangeAlert(threshold: Double) extends RichFlatMapFunction[SensorReading, (String, Double, Double)] {
   //定义状态保存上一次的温度值
-  lazy val lastTempState:ValueState[Double]=getRuntimeContext.getState(new ValueStateDescriptor[Double]("last-temp",classOf[Double]))
+  lazy val lastTempState: ValueState[Double] = getRuntimeContext.getState(new ValueStateDescriptor[Double]("last-temp", classOf[Double]))
 
   override def flatMap(in: SensorReading, collector: Collector[(String, Double, Double)]): Unit = {
     //获取上次的温度值
-    val lastTemp=lastTempState.value()
+    val lastTemp = lastTempState.value()
     //跟最新的温度值求差值作比较
-    val diff=(in.temperature-lastTemp).abs
-    if(diff>threshold)
-      collector.collect((in.id,lastTemp,in.temperature))
+    val diff = (in.temperature - lastTemp).abs
+    if (diff > threshold)
+      collector.collect((in.id, lastTemp, in.temperature))
 
     //更新状态
     lastTempState.update(in.temperature)
   }
 }
+
 //Keyed state测试，必须定义在RichFunction中，因为需要运行时上下文
-class MyRichMapper1 extends RichMapFunction[SensorReading,String]{
+class MyRichMapper1 extends RichMapFunction[SensorReading, String] {
 
-  var valueState:ValueState[Double]=_
+  var valueState: ValueState[Double] = _
 
-  lazy val listState:ListState[Int]=getRuntimeContext.
-    getListState(new ListStateDescriptor[Int]("liststate",classOf[Int]))
+  lazy val listState: ListState[Int] = getRuntimeContext.
+    getListState(new ListStateDescriptor[Int]("liststate", classOf[Int]))
 
-  lazy val mapState:MapState[String,Double]=
-    getRuntimeContext.getMapState(new MapStateDescriptor[String,Double]("mapstate",classOf[String],classOf[Double]))
+  lazy val mapState: MapState[String, Double] =
+    getRuntimeContext.getMapState(new MapStateDescriptor[String, Double]("mapstate", classOf[String], classOf[Double]))
 
-  lazy val reduceState:ReducingState[SensorReading]=
-    getRuntimeContext.getReducingState(new ReducingStateDescriptor[SensorReading]("reducestate",new MyReducer,classOf[SensorReading]))
+  lazy val reduceState: ReducingState[SensorReading] =
+    getRuntimeContext.getReducingState(new ReducingStateDescriptor[SensorReading]("reducestate", new MyReducer, classOf[SensorReading]))
 
   override def open(parameters: Configuration): Unit = {
-    valueState=getRuntimeContext.getState(new ValueStateDescriptor[Double]("valuestate",classOf[Double]))
+    valueState = getRuntimeContext.getState(new ValueStateDescriptor[Double]("valuestate", classOf[Double]))
   }
 
   override def map(in: SensorReading): String = {
     //状态的读写
-    val myV=valueState.value()
+    val myV = valueState.value()
     valueState.update(in.temperature)
 
     listState.add(1)
-    val list=new util.ArrayList[Int]()
+    val list = new util.ArrayList[Int]()
     list.add(2)
     list.add(3)
     listState.addAll(list)
@@ -83,7 +95,7 @@ class MyRichMapper1 extends RichMapFunction[SensorReading,String]{
 
     mapState.contains("sensor_1")
     mapState.get("sensor_1")
-    mapState.put("sensor_1",1.3)
+    mapState.put("sensor_1", 1.3)
 
     reduceState.get()
     reduceState.add(in)
