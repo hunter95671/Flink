@@ -1,5 +1,6 @@
 package com.hunter95.apitest
 
+import org.apache.flink.runtime.state.filesystem.FsStateBackend
 import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
@@ -8,6 +9,8 @@ object SideOutputTest {
   def main(args: Array[String]): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
+    //设置状态后端
+    env.setStateBackend(new FsStateBackend(""))
 
     val inputStream = env.socketTextStream("localhost", 7777)
 
