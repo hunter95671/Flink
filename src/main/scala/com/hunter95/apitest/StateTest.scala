@@ -1,17 +1,33 @@
 package com.hunter95.apitest
 
 import org.apache.flink.api.common.functions.{RichFlatMapFunction, RichMapFunction}
+import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.common.state.{ListState, ListStateDescriptor, MapState, MapStateDescriptor, ReducingState, ReducingStateDescriptor, ValueState, ValueStateDescriptor}
+import org.apache.flink.api.common.time.Time
 import org.apache.flink.configuration.Configuration
+import org.apache.flink.streaming.api.CheckpointingMode
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.util.Collector
 
 import java.util
+import java.util.concurrent.TimeUnit
 
 object StateTest {
   def main(args: Array[String]): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(1)
+
+    env.enableCheckpointing(1000L)
+    env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE)
+    env.getCheckpointConfig.setCheckpointTimeout(60000L)
+    env.getCheckpointConfig.setMaxConcurrentCheckpoints(2)
+    env.getCheckpointConfig.setMinPauseBetweenCheckpoints(500L)
+    env.getCheckpointConfig.setPreferCheckpointForRecovery(true)
+    env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)
+
+    //重启策略配置
+    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3,10000L))
+    env.setRestartStrategy(RestartStrategies.failureRateRestart(5,Time.of(5,TimeUnit.MINUTES),Time.of(5,TimeUnit.MINUTES)))
 
     val inputStream = env.socketTextStream("localhost", 7777)
 
