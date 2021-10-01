@@ -40,7 +40,7 @@ object TimeAndWindowTest {
     // 1. Group Window
     // 1.1 table api
     val resultTable = sensorTable
-      .window(Tumble over 10.seconds on 'ts as 'tw)     // 每10秒统计一次，滚动时间窗口
+      .window(Tumble over 10.seconds on 'ts as 'tw) // 每10秒统计一次，滚动时间窗口
       .groupBy('id, 'tw)
       .select('id, 'id.count, 'temperature.avg, 'tw.end)
 
@@ -61,12 +61,12 @@ object TimeAndWindowTest {
 
     //2. Over window：统计每个sansor每条数据与之前两行数据的平均温度
     //2.1 table api
-    val overResultTable=sensorTable
+    val overResultTable = sensorTable
       .window(Over partitionBy 'id orderBy 'ts preceding 2.rows as 'ow)
-      .select('id,'ts,'id.count over 'ow,'temperature.avg over 'ow)
+      .select('id, 'ts, 'id.count over 'ow, 'temperature.avg over 'ow)
 
     //2.2 sql
-    val overResultSqlTable=tableEnv.sqlQuery(
+    val overResultSqlTable = tableEnv.sqlQuery(
       """
         |select
         |id,
