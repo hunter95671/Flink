@@ -21,26 +21,26 @@ object SideOutputTest {
         SensorReading(arr(0), arr(1).toLong, arr(2).toDouble)
       })
 
-    val highTempStream=dataStream
+    val highTempStream = dataStream
       .process(new SplitTempProcessor(30.0))
 
     highTempStream.print("high")
 
-    highTempStream.getSideOutput(new OutputTag[(String,Long,Double)]("low")).print("low")
+    highTempStream.getSideOutput(new OutputTag[(String, Long, Double)]("low")).print("low")
 
     env.execute("side output test")
   }
 }
 
 //实现自定义的ProcessFunction，进行分流
-class SplitTempProcessor(threshold: Double) extends ProcessFunction[SensorReading,SensorReading]{
+class SplitTempProcessor(threshold: Double) extends ProcessFunction[SensorReading, SensorReading] {
   override def processElement(i: SensorReading, context: ProcessFunction[SensorReading, SensorReading]#Context, collector: Collector[SensorReading]): Unit = {
-    if(i.temperature>threshold){
+    if (i.temperature > threshold) {
       //如果当前温度大于30，那么输出到主流
       collector.collect(i)
-    }else{
+    } else {
       //如果不超过30度，那么输出到侧输出流
-      context.output(new OutputTag[(String,Long,Double)]("low"),(i.id,i.timestamp,i.temperature))
+      context.output(new OutputTag[(String, Long, Double)]("low"), (i.id, i.timestamp, i.temperature))
     }
   }
 }

@@ -26,8 +26,8 @@ object StateTest {
     env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)
 
     //重启策略配置
-    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3,10000L))
-    env.setRestartStrategy(RestartStrategies.failureRateRestart(5,Time.of(5,TimeUnit.MINUTES),Time.of(5,TimeUnit.MINUTES)))
+    env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 10000L))
+    env.setRestartStrategy(RestartStrategies.failureRateRestart(5, Time.of(5, TimeUnit.MINUTES), Time.of(5, TimeUnit.MINUTES)))
 
     val inputStream = env.socketTextStream("localhost", 7777)
 
@@ -42,15 +42,15 @@ object StateTest {
     val alertStream = dataStream
       .keyBy(_.id)
       //  .flatMap(new TempChangeAlert(10.0))
-      .flatMapWithState[(String,Double,Double),Double]({
-        case (data:SensorReading,None)=>(List.empty,Some(data.temperature))
-        case (data:SensorReading,lastTemp:Some[Double])=>{
+      .flatMapWithState[(String, Double, Double), Double]({
+        case (data: SensorReading, None) => (List.empty, Some(data.temperature))
+        case (data: SensorReading, lastTemp: Some[Double]) => {
           //跟最新的温度值求差值作比较
           val diff = (data.temperature - lastTemp.get).abs
           if (diff > 10)
-            (List((data.id,lastTemp.get,data.temperature)),Some(data.temperature))
+            (List((data.id, lastTemp.get, data.temperature)), Some(data.temperature))
           else
-            (List.empty,Some(data.temperature))
+            (List.empty, Some(data.temperature))
         }
       })
 

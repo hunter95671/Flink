@@ -32,7 +32,7 @@ object WindowTest {
         override def extractTimestamp(t: SensorReading): Long = t.timestamp * 1000L
       })
 
-    val latetag=new OutputTag[(String, Double, Long)]("late")
+    val latetag = new OutputTag[(String, Double, Long)]("late")
     //每15秒统计一次，窗口内各传感器所有温度的最小值
     val resultStream = dataStream
       .map(data => (data.id, data.temperature, data.timestamp))
@@ -42,8 +42,8 @@ object WindowTest {
       //.window(EventTimeSessionWindows.withGap(Time.seconds(10)))   //回话窗口
       //.countWindow(10)   //滚动计数窗口
       .timeWindow(Time.seconds(15)) //一个参数为滚动时间窗口，两个参数为滑动时间窗口
-      .allowedLateness(Time.seconds(1))    //允许接收迟到数据
-      .sideOutputLateData(latetag)  //侧输出流
+      .allowedLateness(Time.seconds(1)) //允许接收迟到数据
+      .sideOutputLateData(latetag) //侧输出流
       //.minBy(1)
       .reduce((curRes, newData) => (curRes._1, curRes._2.min(newData._2), newData._3))
 

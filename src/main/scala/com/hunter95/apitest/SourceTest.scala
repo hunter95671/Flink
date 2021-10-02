@@ -68,12 +68,12 @@ class MySensorSource() extends SourceFunction[SensorReading] {
     //定义无限循环,不停地产生数据，除非被cancel
     while (running) {
       //在上次数据基础上微调，更新温度值
-      curTemp=curTemp.map(
-        data=>(data._1,data._2+rand.nextGaussian())
+      curTemp = curTemp.map(
+        data => (data._1, data._2 + rand.nextGaussian())
       )
       //获取当前时间戳，加入到数据中
-      val curTime=System.currentTimeMillis()
-      curTemp.foreach(data=>sourceContext.collect(SensorReading(data._1,curTime,data._2)))
+      val curTime = System.currentTimeMillis()
+      curTemp.foreach(data => sourceContext.collect(SensorReading(data._1, curTime, data._2)))
       //间隔100ms
       Thread.sleep(500)
     }
